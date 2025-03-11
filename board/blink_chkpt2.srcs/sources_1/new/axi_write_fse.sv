@@ -65,12 +65,14 @@ always @(posedge clk or negedge resetn) begin
         case (state)
             STATE_IDLE: begin
                 // !done to ensure buffer
-                if (!write_done && start) begin
+                if (start) begin
                     truncated_burst <= (addr&16'h1000) != ((addr+32*num_writes)&16'h1000);
                     arg_num <= 0;
                     state <= STATE_WRITE_ADDR;
-                end else begin
-                    write_done <= 0;
+                    m_axi_awaddr  <= addr;
+                    m_axi_awvalid <= 1'b1;
+                    m_axi_awsize <= 5;
+                    m_axi_awlen <= (addr&16'h1000) != ((addr+32*num_writes)&16'h1000) ? 0 : num_writes-1;
                 end
             end
             
@@ -79,6 +81,10 @@ always @(posedge clk or negedge resetn) begin
                 if(m_axi_awvalid && m_axi_awready) begin
                     m_axi_awvalid <= 0;
                     state <= STATE_WRITE_DATA;
+                    m_axi_wlast <= truncated_burst || num_writes==1;
+                    m_axi_wdata  <= write_data[arg_num];
+                    m_axi_wstrb  <= 32'hFFFFFFFF;  // Full word write
+                    m_axi_wvalid <= 1'b1;
                 end else begin
                     m_axi_awaddr  <= addr + 32*arg_num;
                     m_axi_awvalid <= 1'b1;
@@ -93,29 +99,28 @@ always @(posedge clk or negedge resetn) begin
                     if(arg_num == num_writes-1 || truncated_burst) begin
                         m_axi_wvalid <= 0;
                         state <= STATE_WRITE_RESP;
+                        m_axi_bready <= 1'b1;
                     end else begin
                         m_axi_wdata <= write_data[arg_num+1];
                         m_axi_wlast <= arg_num==num_writes-2;
                     end
-                end else if (!m_axi_wvalid) begin
-                    m_axi_wlast <= truncated_burst || num_writes==1;
-                    m_axi_wdata  <= write_data[arg_num];
-                    m_axi_wstrb  <= 32'hFFFFFFFF;  // Full word write
-                    m_axi_wvalid <= 1'b1;
                 end
             end
             
             STATE_WRITE_RESP: begin
                 if(m_axi_bready && m_axi_bvalid) begin
                     m_axi_bready <= 0;
-                    state <= (arg_num == num_writes) ? STATE_DONE : STATE_WRITE_ADDR;
-                end else begin
-                    m_axi_bready <= 1'b1;
+                    if(arg_num==num_writes) begin
+                        state <= STATE_DONE;
+                        write_done <= 1;
+                    end else begin
+                        state <= STATE_WRITE_ADDR;
+                    end
                 end
             end
             
             STATE_DONE: begin
-                write_done <= 1'b1;
+                write_done <= 0;
                 state <= STATE_IDLE;
             end
             

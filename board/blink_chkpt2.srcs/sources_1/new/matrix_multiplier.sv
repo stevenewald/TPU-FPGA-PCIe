@@ -77,13 +77,17 @@ systolic_array #(
     );
     
 reg increment_tile;
+wire [MATRIX_NUM_NBITS-1:0] matrix_num_a_prev;
+wire [MATRIX_NUM_NBITS-1:0] matrix_num_b_prev;
+wire [MATRIX_NUM_NBITS-1:0] matrix_num_result_prev;
 wire [MATRIX_NUM_NBITS-1:0] matrix_num_a;
 wire [MATRIX_NUM_NBITS-1:0] matrix_num_b;
 wire [MATRIX_NUM_NBITS-1:0] matrix_num_result;
 wire last_subtile;
 wire all_tiles_complete;
-
-reg [MATRIX_NUM_NBITS-1:0] tmp_matrix_num_result;
+wire last_subtile_prev;
+wire all_tiles_complete_prev;
+reg a_ready;
 
 matrix_num_calculator calc(
     .arstn(aresetn),
@@ -95,8 +99,13 @@ matrix_num_calculator calc(
     .matrix_num_a(matrix_num_a),
     .matrix_num_b(matrix_num_b),
     .matrix_num_result(matrix_num_result),
+    .matrix_num_a_prev(matrix_num_a_prev),
+    .matrix_num_b_prev(matrix_num_b_prev),
+    .matrix_num_result_prev(matrix_num_result_prev),
     .last_subtile(last_subtile),
-    .all_tiles_complete(all_tiles_complete));
+    .all_tiles_complete(all_tiles_complete),
+    .last_subtile_prev(last_subtile_prev),
+    .all_tiles_complete_prev(all_tiles_complete_prev));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Output and Data Handling
@@ -112,16 +121,17 @@ always @(posedge aclk or negedge aresetn) begin
         k_tiles <= 0;
         n_tiles <= 0;
         increment_tile <= 0;
-        tmp_matrix_num_result <= 0;
         cycles_elapsed <= 0;
         for (int init = 0; init < SYS_DIM*SYS_DIM; init = init + 1) begin
             mat_a[init] <= 32'h0;
             mat_b[init] <= 32'h0;
         end
+        a_ready <= 0;
     end else begin
         matrix_command <= MHS_IDLE;
         increment_tile <= 0;
         cycles_elapsed <= cycles_elapsed + 1;
+        if(matrix_done) a_ready <= 1;
         
         case (current_state)
             S_IDLE: begin
@@ -145,6 +155,7 @@ always @(posedge aclk or negedge aresetn) begin
                     n_tiles <= status_read_data[29:20] / SYS_DIM;
                     current_state <= S_START_TILE;
                     cycles_elapsed <= 0;
+                    a_ready <= 0;
                 end
             end
             
@@ -155,17 +166,21 @@ always @(posedge aclk or negedge aresetn) begin
                 end else begin
                     accumulate <= 1;
                     current_state <= S_READ_A;
+                    if(!a_ready) begin
+                        matrix_num <= matrix_num_a;
+                        matrix_command <= MHS_READ_MATRIX;
+                    end
                 end
             end
 
             // Read from 0x0 -> reg_A
             S_READ_A: begin
-                if (matrix_done) begin
+                if (a_ready) begin
                     mat_a <= matrix_read_data;
                     current_state <= S_READ_B;
-                end else begin
-                    matrix_num <= matrix_num_a;
+                    matrix_num <= matrix_num_b;
                     matrix_command <= MHS_READ_MATRIX;
+                    increment_tile <= 1;
                 end
             end
             
@@ -173,8 +188,10 @@ always @(posedge aclk or negedge aresetn) begin
                 if (matrix_done) begin
                     mat_b <= matrix_read_data;
                     current_state <= S_COMPUTE;
-                end else begin
-                    matrix_num <= matrix_num_b;
+                    start_mul <= 1;
+                    
+                    a_ready <= 0;
+                    matrix_num <= matrix_num_a; // next
                     matrix_command <= MHS_READ_MATRIX;
                 end
             end
@@ -183,16 +200,16 @@ always @(posedge aclk or negedge aresetn) begin
                 if(mul_done) begin
                     start_mul <= 0;
                     current_state <= S_COMPLETE_TILE;
-                end else begin
-                    start_mul <= 1;
                 end
             end
             
             S_COMPLETE_TILE: begin
-                increment_tile <= 1;
-                if(last_subtile) begin // all sub tiles complete
-                    tmp_matrix_num_result <= matrix_num_result;
-                    current_state <= S_WRITE_RESULTS;
+                if(last_subtile_prev) begin // all sub tiles complete
+                    if(a_ready) begin // skip waiting for update
+                        current_state <= S_WRITE_RESULTS;
+                        matrix_num <= matrix_num_result_prev;
+                        matrix_command <= MHS_WRITE_RESULT;
+                    end
                 end else begin
                     current_state <= S_START_TILE;
                 end
@@ -202,9 +219,6 @@ always @(posedge aclk or negedge aresetn) begin
                 if(matrix_done) begin
                     current_state <= S_START_TILE;
                     accumulate <= 0;
-                end else begin
-                    matrix_num <= tmp_matrix_num_result;
-                    matrix_command <= MHS_WRITE_RESULT;
                 end
             end
             

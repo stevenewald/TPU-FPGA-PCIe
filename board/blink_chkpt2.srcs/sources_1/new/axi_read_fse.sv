@@ -57,13 +57,14 @@ always @(posedge clk or negedge resetn) begin
     end else begin
         case (state)
             STATE_IDLE: begin
-                // !done to ensure buffer
-                if (!read_done && start) begin
+                if (start) begin
                     truncated_burst <= (addr&16'h1000) != ((addr+32*num_reads)&32'h1000);
                     arg_num <= 0;
                     state <= STATE_READ_ADDR;
-                end else begin
-                    read_done <= 0;
+                    m_axi_araddr  <= addr;
+                    m_axi_arvalid <= 1'b1;
+                    m_axi_arlen <= (addr&16'h1000) != ((addr+32*num_reads)&32'h1000) ? 0 : num_reads-1;
+                    m_axi_arsize <= 5;
                 end
             end
 
@@ -73,6 +74,7 @@ always @(posedge clk or negedge resetn) begin
                 if(m_axi_arvalid && m_axi_arready) begin
                     m_axi_arvalid <= 0;
                     state <= STATE_READ_DATA;
+                    m_axi_rready <= 1'b1;
                 end else begin
                     m_axi_araddr  <= addr + 32*arg_num;
                     m_axi_arvalid <= 1'b1;
@@ -88,17 +90,17 @@ always @(posedge clk or negedge resetn) begin
                     if(m_axi_rlast && arg_num==num_reads-1) begin
                         m_axi_rready <= 0;
                         state <= STATE_DONE;
+                        read_done <= 1'b1;
+                        state <= STATE_DONE;
                     end else if(m_axi_rlast && truncated_burst) begin
                         m_axi_rready <= 0;
                         state <= STATE_READ_ADDR;
                     end
-                end else if(!m_axi_rready) begin
-                    m_axi_rready <= 1'b1;
                 end
             end
             
             STATE_DONE: begin
-                read_done <= 1'b1;
+                read_done <= 0;
                 state <= STATE_IDLE;
             end
             

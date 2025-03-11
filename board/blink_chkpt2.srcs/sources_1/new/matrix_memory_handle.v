@@ -80,20 +80,14 @@ module matrix_memory_handle #(
         end else begin
             case (state)
                 MHS_IDLE: begin
-                    if(matrix_done) begin
-                        // Give time for higher level module to process done signal
-                        // Can maybe remove?
-                        matrix_done <= 0;
-                    end else begin
-                        state <= command;
-                    end
+                    state <= command;
                 end
                 MHS_READ_STATUS: begin
                     if(axi_done) begin
                         status_read_data <= axi_read_data[0][31:0];
                         matrix_done <= 1;
                         axi_start <= 0;
-                        state <= MHS_IDLE;
+                        state <= MHS_DONE;
                     end else begin
                         axi_addr <= STATUS_ADDR;
                         axi_num_reads <= 1;
@@ -104,7 +98,7 @@ module matrix_memory_handle #(
                 MHS_READ_MATRIX: begin
                     if(axi_done) begin
                         matrix_read_data <= matrix_tmp_rdata;
-                        state <= MHS_IDLE;
+                        state <= MHS_DONE;
                         matrix_done <= 1;
                         axi_start <= 0;
                     end else begin
@@ -116,7 +110,7 @@ module matrix_memory_handle #(
                 end
                 MHS_WRITE_RESULT: begin
                     if(axi_done) begin
-                        state <= MHS_IDLE;
+                        state <= MHS_DONE;
                         matrix_done <= 1;
                         axi_write <= 0;
                         axi_start <= 0;
@@ -132,7 +126,7 @@ module matrix_memory_handle #(
                     if(msi_interrupt_req && msi_interrupt_ack) begin
                         msi_interrupt_req <= 1'b0;
                         matrix_done <= 1;
-                        state <= MHS_IDLE;
+                        state <= MHS_DONE;
                     end else begin
                         msi_interrupt_req <= 1'b1;
                     end
@@ -140,7 +134,7 @@ module matrix_memory_handle #(
                 MHS_RESET_STATUS: begin
                     if(axi_done) begin
                         axi_start <= 0;
-                        state <= MHS_IDLE;
+                        state <= MHS_DONE;
                         matrix_done <= 1;
                         axi_write <= 0;
                     end else begin
@@ -150,6 +144,10 @@ module matrix_memory_handle #(
                         axi_write <= 1;
                         axi_start <= 1;
                     end
+                end
+                MHS_DONE: begin
+                    matrix_done <= 0;
+                    state <= MHS_IDLE;
                 end
             endcase
         end

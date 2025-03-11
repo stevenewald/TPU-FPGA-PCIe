@@ -21,7 +21,7 @@
         "BMG_INSTANCE": [ { "value": "EXTERNAL", "value_permission": "bd", "resolve_type": "user", "usage": "all" } ],
         "MEM_DEPTH": [ { "value": "2048", "value_src": "propagated", "value_permission": "bd", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "READ_LATENCY": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "RD_CMD_OPTIMIZATION": [ { "value": "0", "resolve_type": "user", "format": "long", "usage": "all" } ]
+        "RD_CMD_OPTIMIZATION": [ { "value": "1", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ]
       },
       "model_parameters": {
         "C_BRAM_INST_MODE": [ { "value": "EXTERNAL", "resolve_type": "generated", "usage": "all" } ],
@@ -35,7 +35,7 @@
         "C_SINGLE_PORT_BRAM": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_FAMILY": [ { "value": "artix7", "resolve_type": "generated", "usage": "all" } ],
         "C_READ_LATENCY": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
-        "C_RD_CMD_OPTIMIZATION": [ { "value": "0", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "C_RD_CMD_OPTIMIZATION": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_S_AXI_CTRL_ADDR_WIDTH": [ { "value": "32", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_S_AXI_CTRL_DATA_WIDTH": [ { "value": "32", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_ECC": [ { "value": "0", "resolve_type": "generated", "format": "long", "usage": "all" } ],

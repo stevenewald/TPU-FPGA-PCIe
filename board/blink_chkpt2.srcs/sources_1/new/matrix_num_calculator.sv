@@ -28,9 +28,14 @@ module matrix_num_calculator(
     input wire [BITS_PER_TILE_CNT-1:0] m_tiles,
     input wire [BITS_PER_TILE_CNT-1:0] k_tiles,
     input wire [BITS_PER_TILE_CNT-1:0] n_tiles,
+    output reg [MATRIX_NUM_NBITS-1:0] matrix_num_a_prev,
+    output reg [MATRIX_NUM_NBITS-1:0] matrix_num_b_prev,
+    output reg [MATRIX_NUM_NBITS-1:0] matrix_num_result_prev,
     output wire [MATRIX_NUM_NBITS-1:0] matrix_num_a,
     output wire [MATRIX_NUM_NBITS-1:0] matrix_num_b,
     output wire [MATRIX_NUM_NBITS-1:0] matrix_num_result,
+    output reg last_subtile_prev,
+    output reg all_tiles_complete_prev,
     output wire last_subtile,
     output wire all_tiles_complete
     );
@@ -57,7 +62,17 @@ module matrix_num_calculator(
             output_tile_num <= 0;
             output_tile_num_mod_tile_span <= 0;
             output_tile_num_div_tile_span <= 0;
+            matrix_num_a_prev <= 0;
+            matrix_num_b_prev <= 0;
+            matrix_num_result_prev <= 0;
+            last_subtile_prev <= 0;
+            all_tiles_complete_prev <= 0;
         end else if(increment) begin
+            matrix_num_a_prev <= matrix_num_a;
+            matrix_num_b_prev <= matrix_num_b;
+            matrix_num_result_prev <= matrix_num_result;
+            last_subtile_prev <= last_subtile;
+            all_tiles_complete_prev <= all_tiles_complete;
             if(all_tiles_complete) begin
                 sub_tile_num <= 0;
                 output_tile_num <= 0;

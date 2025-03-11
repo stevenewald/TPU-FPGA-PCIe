@@ -549,6 +549,9 @@
           "PROTOCOL": {
             "value": "AXI4"
           },
+          "RD_CMD_OPTIMIZATION": {
+            "value": "1"
+          },
           "SINGLE_PORT_BRAM": {
             "value": "1"
           }

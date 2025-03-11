@@ -6,7 +6,7 @@
 // If one tile had odd number of elements, it would need padding or some other mechanism
 parameter SYS_DIM        = 8;
 
-parameter MAX_INPUT_SIZE = 100;
+parameter MAX_INPUT_SIZE = 1024;
 
 parameter MATRIX_NUM_NBITS = $clog2(4*(MAX_INPUT_SIZE*MAX_INPUT_SIZE)/(SYS_DIM*SYS_DIM)+1);
 
@@ -31,4 +31,5 @@ parameter MHS_READ_MATRIX = 4'd2;
 parameter MHS_WRITE_RESULT  = 3'd4;
 parameter MHS_RESET_STATUS  = 3'd5;
 parameter MHS_INTERRUPT     = 3'd6;
+parameter MHS_DONE          = 3'd7;
 `endif
